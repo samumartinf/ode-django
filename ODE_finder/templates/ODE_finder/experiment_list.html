@@ -1,37 +1,11 @@
-<!-- templates/thumbnailer/upload_experiment.html -->
+
+{% extends 'ODE_finder/base.html' %}
+
 {% load widget_tweaks %}
 {% load static %}
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Data upload</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.5/css/bulma.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/vue"></script>
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.min.js"></script>
-  <script defer src="https://use.fontawesome.com/releases/v5.0.7/js/all.js"></script>
-</head>
-<body>
 
-  <nav class="navbar" role="navigation" aria-label="main navigation">
-    <div class="navbar-brand">
-      <a class="navbar-item" href="{% url 'upload_experiment' %}">
-        Upload Experiment
-      </a>
-    </div>
-      <div class="navbar-brand">
-      <a class="navbar-item" href="{% url 'experiment_list' %}">
-        Experiment List
-      </a>
-    </div>
-  </nav>
-
-  <section class="hero is-primary is-fullheight-with-navbar">
+{% block content %}
     <div class="hero-body">
       <div class="container">
         <h1 class="title is-size-1 has-text-centered">Experiments List</h1>
@@ -83,6 +57,4 @@
         </div>
       </div>
     </div>
-  </section>
-</body>
-</html>
+{% endblock %}

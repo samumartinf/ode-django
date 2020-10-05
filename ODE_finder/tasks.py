@@ -14,8 +14,8 @@ from ode_composer.sbl import SBL
 import numpy as np
 from ode_composer.signal_preprocessor import (
     GPSignalPreprocessor,
+    SplineSignalPreprocessor,
 )
-
 
 sys.path.append("..")
 
@@ -26,7 +26,7 @@ def adding_task(x, y):
 
 
 @shared_task
-def find_structure(file_path, question_pk):
+def find_structure(file_path, experiment_pk, title, preprocessor='SP'):
     os.chdir(settings.EXPERIMENTS_URL)
     path, file = os.path.split(file_path)
 
@@ -44,11 +44,21 @@ def find_structure(file_path, question_pk):
                 col_list.append(col)
 
                 # step 0: GP Signal preprocessor
-                gproc = GPSignalPreprocessor(t=t, y=x_data, selected_kernel="RatQuad")
-                y_samples, t_gp = gproc.interpolate(return_extended_time=True, noisy_obs=True)
-                gproc.calculate_time_derivative()
-                dydt = gproc.dydt
-                dy_std = gproc.A_std
+                if preprocessor == 'GP':
+                    proc = GPSignalPreprocessor(t=t, y=x_data, selected_kernel="RatQuad")
+                    y_samples, t_gp = proc.interpolate(return_extended_time=True, noisy_obs=True)
+                    proc.calculate_time_derivative()
+                    dydt = proc.dydt
+
+                else:
+                    proc = SplineSignalPreprocessor(t=t, y=x_data)
+                    y_samples = proc.interpolate(t)
+                    dydt = proc.calculate_time_derivative(t)
+
+                if preprocessor == 'GP':
+                    dy_std = proc.A_std
+                else:
+                    dy_std = 0.1  # Placeholder value
 
                 # Populate dictionary
                 key_string = col
@@ -56,9 +66,8 @@ def find_structure(file_path, question_pk):
                 derivatives_dict[key_string] = dydt
                 std_dict[key_string] = dy_std
 
-
         # step 1: define a dictionary
-        max_order = 3
+        max_order = 2
         from itertools import combinations_with_replacement
         d_f = []
         print(col_list)
@@ -94,12 +103,19 @@ def find_structure(file_path, question_pk):
 
         results_df = pd.DataFrame(sbl_dict)
         os.chdir(settings.RESULTS_URL)
+
+        experiment = Experiment.objects.get(pk=experiment_pk)
         results_df.to_csv(file)
-        result = SimulationResult(experiment=Experiment.objects.get(pk=question_pk))
         temp_file = open(file)
         result_file = File(temp_file)
-        print(result_file)
-        result.result_file = result_file
+
+        result = SimulationResult(
+            title=str.join(title, experiment.title),
+            experiment=experiment,
+            result_file=result_file,
+            signal_preprocessor=preprocessor
+        )
+
         result.save()
         result_file.close()
         temp_file.close()
