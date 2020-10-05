@@ -37,7 +37,7 @@
                             {% for result in results %}
                             {% if result.experiment == experiment %}
                             <a href="{{ result.result_file.url }}" class="button is-info" target="_blank" download>
-                                Dowload .csv
+                                Download {{result.title}}
                             </a>
                             {% endif %}
                             {% endfor %}

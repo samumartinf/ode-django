@@ -110,7 +110,7 @@ def find_structure(file_path, experiment_pk, title, preprocessor='SP'):
         result_file = File(temp_file)
 
         result = SimulationResult(
-            title=str.join(title, experiment.title),
+            title=title,
             experiment=experiment,
             result_file=result_file,
             signal_preprocessor=preprocessor
