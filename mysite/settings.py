@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'ODE_finder.apps.PollsConfig',
     'crispy_forms',
     'widget_tweaks',
+    'django_cleanup.apps.CleanupConfig',
 ]
 
 MIDDLEWARE = [

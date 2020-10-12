@@ -5,7 +5,6 @@ from django.core.files import File
 from django.conf import settings
 from celery import shared_task
 from scipy.integrate import solve_ivp
-import matplotlib.pyplot as plt
 
 import pandas as pd
 
@@ -33,7 +32,7 @@ def find_structure(file_path, experiment_pk, title, preprocessor='SP'):
     path, file = os.path.split(file_path)
 
     try:
-        df = pd.read_csv(file, index_col=0)
+        df = pd.read_csv(file)
         t = df['t']
 
         data_dict = {}
@@ -98,20 +97,26 @@ def find_structure(file_path, experiment_pk, title, preprocessor='SP'):
             sbl.compute_model_structure()
             sbl_dict[key] = sbl.get_results(zero_th=zero_th)
 
+
         # step 4 reporting
         # build the ODE
-
         ode_model = StateSpaceModel(states=sbl_dict, parameters=None)
         print("Estimated ODE model:")
         print(ode_model)
 
         # TODO: Catch error if no solution is found
         states = col_list
-        sol_ode = solve_ivp(fun=ode_model.get_rhs, t_span=(t[0], t[-1]), t_eval=t, y0=initial_conditions, args=(states,))
+        t_plot = t.tolist()
+        sol_ode = solve_ivp(
+            fun=ode_model.get_rhs,
+            t_span=(t_plot[0], t_plot[-1]),
+            t_eval=t_plot, y0=initial_conditions,
+            args=(states,)
+        )
 
-        print(sol_ode)
-        plt.figure()
-        plt.plot(sol_ode)
+        plot_dict = dict(zip(states, sol_ode.y.tolist())) #Make list to ensure JSON serializable
+        print(plot_dict)
+
         results_df = pd.DataFrame(sbl_dict)
         os.chdir(settings.RESULTS_URL)
 
@@ -131,12 +136,10 @@ def find_structure(file_path, experiment_pk, title, preprocessor='SP'):
         result_file.close()
         temp_file.close()
 
+        return plot_dict
+
     except IOError as e:
         print(e)
-        return 155
-
-    except:
-        print("failed to find structure, please check csv file")
         return 155
 
     return 0

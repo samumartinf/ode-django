@@ -3,6 +3,7 @@ import datetime
 from django.db import models
 from .validators import validate_csv_extension
 
+
 # Create your models here.
 class Experiment(models.Model):
     title = models.CharField(max_length=200)
@@ -43,8 +44,11 @@ class SimulationResult(models.Model):
     )
     simulation_date = models.DateTimeField('date simulated', auto_now=True)
 
-
     # Model modifiers
+
+    def __str__(self):
+        return self.title
+
     def delete(self, *args, **kwargs):
         self.result_file.delete()
         super().delete(*args, **kwargs)
