@@ -1,7 +1,6 @@
 from django import forms
 from .models import Experiment, SimulationResult
 
-
 class ExperimentForm(forms.ModelForm):
     class Meta:
         model = Experiment

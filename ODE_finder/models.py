@@ -1,13 +1,17 @@
 import datetime
 
 from django.db import models
-from django.utils import timezone
+from .validators import validate_csv_extension
 
 # Create your models here.
 class Experiment(models.Model):
     title = models.CharField(max_length=200)
     author = models.CharField(max_length=200)
-    csv_file = models.FileField(upload_to='experiments/', max_length=100)
+    csv_file = models.FileField(
+        upload_to='experiments/',
+        max_length=100,
+        validators=[validate_csv_extension]
+    )
     upload_date = models.DateTimeField('date uploaded', auto_now=True)
 
     def __str__(self):

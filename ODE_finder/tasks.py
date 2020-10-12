@@ -4,6 +4,8 @@ from .models import SimulationResult, Experiment
 from django.core.files import File
 from django.conf import settings
 from celery import shared_task
+from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
 
 import pandas as pd
 
@@ -35,6 +37,7 @@ def find_structure(file_path, experiment_pk, title, preprocessor='SP'):
         t = df['t']
 
         data_dict = {}
+        initial_conditions = []
         col_list = []
         derivatives_dict = {}
         std_dict = {}
@@ -42,6 +45,7 @@ def find_structure(file_path, experiment_pk, title, preprocessor='SP'):
             if not col == 't':
                 x_data = df[col]
                 col_list.append(col)
+                initial_conditions.append(x_data[0])
 
                 # step 0: GP Signal preprocessor
                 if preprocessor == 'GP':
@@ -101,6 +105,13 @@ def find_structure(file_path, experiment_pk, title, preprocessor='SP'):
         print("Estimated ODE model:")
         print(ode_model)
 
+        # TODO: Catch error if no solution is found
+        states = col_list
+        sol_ode = solve_ivp(fun=ode_model.get_rhs, t_span=(t[0], t[-1]), t_eval=t, y0=initial_conditions, args=(states,))
+
+        print(sol_ode)
+        plt.figure()
+        plt.plot(sol_ode)
         results_df = pd.DataFrame(sbl_dict)
         os.chdir(settings.RESULTS_URL)
 
@@ -122,6 +133,10 @@ def find_structure(file_path, experiment_pk, title, preprocessor='SP'):
 
     except IOError as e:
         print(e)
+        return 155
+
+    except:
+        print("failed to find structure, please check csv file")
         return 155
 
     return 0
