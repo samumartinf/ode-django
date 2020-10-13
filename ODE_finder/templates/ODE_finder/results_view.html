@@ -1,0 +1,25 @@
+{% extends 'ODE_finder/plotting.html' %}
+
+{% load widget_tweaks %}
+{% load static %}
+
+
+{% block content %}
+    <div class="hero-body">
+      <div class="container">
+        <h1 class="title is-size-1 has-text-centered">{{ task_status }}</h1>
+        <p class="subtitle has-text-centered" id="progress-title"></p>
+        <div class="columns is-centered">
+          {% if div %}
+          {{ div|safe }}
+          {% else %}
+          <h2 class="title is-size-2">Reload page</h2>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if div %}
+    {{ script|safe }}
+    {% endif %}
+{% endblock %}

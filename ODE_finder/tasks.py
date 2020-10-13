@@ -35,6 +35,7 @@ def find_structure(file_path, experiment_pk, title, preprocessor='SP'):
         df = pd.read_csv(file)
         t = df['t']
 
+        original_data = {}
         data_dict = {}
         initial_conditions = []
         col_list = []
@@ -43,6 +44,7 @@ def find_structure(file_path, experiment_pk, title, preprocessor='SP'):
         for col in df.columns:
             if not col == 't':
                 x_data = df[col]
+                original_data[f"{col} orig."] = x_data.tolist()
                 col_list.append(col)
                 initial_conditions.append(x_data[0])
 
@@ -115,7 +117,8 @@ def find_structure(file_path, experiment_pk, title, preprocessor='SP'):
         )
 
         plot_dict = dict(zip(states, sol_ode.y.tolist())) #Make list to ensure JSON serializable
-        print(plot_dict)
+        plot_dict = {**original_data, **plot_dict}
+        plot_dict['t'] = t_plot
 
         results_df = pd.DataFrame(sbl_dict)
         os.chdir(settings.RESULTS_URL)
