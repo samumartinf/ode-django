@@ -9,6 +9,8 @@ urlpatterns = [
   path('experiments/', views.experiment_list, name='experiment_list'),
   path('experiments/upload/', views.upload_experiment, name='upload_experiment'),
   path('experiments/<int:pk>/', views.delete_experiment, name='delete_experiment'),
+  path('experiments/simulate/', views.simulation_config, name='simulation_config'),
+  path('experiments/results/', views.results_view, name='results_view'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:

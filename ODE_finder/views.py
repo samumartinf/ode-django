@@ -1,9 +1,13 @@
 import os
-
+from celery import current_app
 from django.shortcuts import render, redirect
 from .tasks import find_structure
-from .forms import ExperimentForm
+from .forms import ExperimentForm, SimulationForm
 from .models import Experiment, SimulationResult
+from bokeh.plotting import figure
+from bokeh.embed import components
+from bokeh.palettes import Spectral4
+from bokeh.models import HoverTool
 
 
 def delete_experiment(request, pk):
@@ -23,6 +27,34 @@ def experiment_list(request):
     })
 
 
+def simulation_config(request):
+    if request.method == "POST":
+        form = SimulationForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            context = {}
+            experiment = form.cleaned_data['experiment']
+            preprocessor = form.cleaned_data['signal_preprocessor']
+            title = form.cleaned_data['title']
+
+            task = find_structure.delay(
+                file_path=experiment.csv_file.url,
+                experiment_pk=experiment.pk,
+                title=title,
+                preprocessor=preprocessor
+            )
+            request.session['task_id'] = task.id
+
+            return redirect('results_view')
+
+    else:
+        form = SimulationForm()
+
+    return render(request, 'ODE_finder/simulation_config.html', {
+        'form': form
+    })
+
+
 def upload_experiment(request):
     if request.method == "POST":
         form = ExperimentForm(request.POST, request.FILES)
@@ -31,11 +63,45 @@ def upload_experiment(request):
             experiment = Experiment.objects.latest('upload_date')
             file_path = experiment.csv_file.url
             print(file_path)
-            find_structure.delay(file_path, experiment.pk)
-            return redirect('experiment_list')
+            return redirect('simulation_config')
     else:
         form = ExperimentForm()
 
     return render(request, 'ODE_finder/upload_experiment.html', {
         'form': form
     })
+
+
+def results_view(request):
+    task_id = None
+    experiment_pk = None
+    try:
+        task_id = request.session['task_id']
+        task = current_app.AsyncResult(request.session['task_id'])
+    except:
+        pass
+
+    if task_id is None:
+        return redirect('experiment_list')
+
+    context = {'task_status': task.status, 'task_id': task.id}
+
+    if task.status == 'SUCCESS':
+        results_dict = task.get() #results is a dictionary
+        time = results_dict['t']
+        plot = figure(
+            title='Retrieved ODE',
+            x_axis_label='Time',
+            y_axis_label='Value',
+        )
+        for key, color in zip(results_dict, Spectral4):
+            if key != 't':
+                plot.line(time, results_dict[key], legend_label=f"{key}", color=color, line_width=2.0)
+        plot.legend.location = "top_left"
+        plot.legend.click_policy = "hide"
+        plot.sizing_mode = "stretch_both"
+        script, div = components(plot)
+        context['script'] = script
+        context['div'] = div
+
+    return render(request, 'ODE_finder/results_view.html', context)

@@ -4,6 +4,7 @@ from .models import SimulationResult, Experiment
 from django.core.files import File
 from django.conf import settings
 from celery import shared_task
+from scipy.integrate import solve_ivp
 
 import pandas as pd
 
@@ -14,8 +15,8 @@ from ode_composer.sbl import SBL
 import numpy as np
 from ode_composer.signal_preprocessor import (
     GPSignalPreprocessor,
+    SplineSignalPreprocessor,
 )
-
 
 sys.path.append("..")
 
@@ -26,29 +27,43 @@ def adding_task(x, y):
 
 
 @shared_task
-def find_structure(file_path, question_pk):
+def find_structure(file_path, experiment_pk, title, preprocessor='SP'):
     os.chdir(settings.EXPERIMENTS_URL)
     path, file = os.path.split(file_path)
 
     try:
-        df = pd.read_csv(file, index_col=0)
+        df = pd.read_csv(file)
         t = df['t']
 
+        original_data = {}
         data_dict = {}
+        initial_conditions = []
         col_list = []
         derivatives_dict = {}
         std_dict = {}
         for col in df.columns:
             if not col == 't':
                 x_data = df[col]
+                original_data[f"{col} orig."] = x_data.tolist()
                 col_list.append(col)
+                initial_conditions.append(x_data[0])
 
                 # step 0: GP Signal preprocessor
-                gproc = GPSignalPreprocessor(t=t, y=x_data, selected_kernel="RatQuad")
-                y_samples, t_gp = gproc.interpolate(return_extended_time=True, noisy_obs=True)
-                gproc.calculate_time_derivative()
-                dydt = gproc.dydt
-                dy_std = gproc.A_std
+                if preprocessor == 'GP':
+                    proc = GPSignalPreprocessor(t=t, y=x_data, selected_kernel="RatQuad")
+                    y_samples, t_gp = proc.interpolate(return_extended_time=True, noisy_obs=True)
+                    proc.calculate_time_derivative()
+                    dydt = proc.dydt
+
+                else:
+                    proc = SplineSignalPreprocessor(t=t, y=x_data)
+                    y_samples = proc.interpolate(t)
+                    dydt = proc.calculate_time_derivative(t)
+
+                if preprocessor == 'GP':
+                    dy_std = proc.A_std
+                else:
+                    dy_std = 0.1  # Placeholder value
 
                 # Populate dictionary
                 key_string = col
@@ -56,9 +71,8 @@ def find_structure(file_path, question_pk):
                 derivatives_dict[key_string] = dydt
                 std_dict[key_string] = dy_std
 
-
         # step 1: define a dictionary
-        max_order = 3
+        max_order = 2
         from itertools import combinations_with_replacement
         d_f = []
         print(col_list)
@@ -85,24 +99,47 @@ def find_structure(file_path, question_pk):
             sbl.compute_model_structure()
             sbl_dict[key] = sbl.get_results(zero_th=zero_th)
 
+
         # step 4 reporting
         # build the ODE
-
         ode_model = StateSpaceModel(states=sbl_dict, parameters=None)
         print("Estimated ODE model:")
         print(ode_model)
 
+        # TODO: Catch error if no solution is found
+        states = col_list
+        t_plot = t.tolist()
+        sol_ode = solve_ivp(
+            fun=ode_model.get_rhs,
+            t_span=(t_plot[0], t_plot[-1]),
+            t_eval=t_plot, y0=initial_conditions,
+            args=(states,)
+        )
+
+        plot_dict = dict(zip(states, sol_ode.y.tolist())) #Make list to ensure JSON serializable
+        plot_dict = {**original_data, **plot_dict}
+        plot_dict['t'] = t_plot
+
         results_df = pd.DataFrame(sbl_dict)
         os.chdir(settings.RESULTS_URL)
+
+        experiment = Experiment.objects.get(pk=experiment_pk)
         results_df.to_csv(file)
-        result = SimulationResult(experiment=Experiment.objects.get(pk=question_pk))
         temp_file = open(file)
         result_file = File(temp_file)
-        print(result_file)
-        result.result_file = result_file
+
+        result = SimulationResult(
+            title=title,
+            experiment=experiment,
+            result_file=result_file,
+            signal_preprocessor=preprocessor
+        )
+
         result.save()
         result_file.close()
         temp_file.close()
+
+        return plot_dict
 
     except IOError as e:
         print(e)
