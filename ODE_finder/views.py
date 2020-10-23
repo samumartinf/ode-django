@@ -6,7 +6,7 @@ from .forms import ExperimentForm, SimulationForm
 from .models import Experiment, SimulationResult
 from bokeh.plotting import figure
 from bokeh.embed import components
-from bokeh.palettes import Spectral4
+from bokeh.palettes import Category20
 from bokeh.models import HoverTool
 
 
@@ -87,14 +87,14 @@ def results_view(request):
     context = {'task_status': task.status, 'task_id': task.id}
 
     if task.status == 'SUCCESS':
-        results_dict = task.get() #results is a dictionary
+        results_dict, ode_strings = task.get() #results is a dictionary and ode_strings
         time = results_dict['t']
         plot = figure(
             title='Retrieved ODE',
             x_axis_label='Time',
             y_axis_label='Value',
         )
-        for key, color in zip(results_dict, Spectral4):
+        for key, color in zip(results_dict, Category20[len(results_dict.keys())]):
             if key != 't':
                 plot.line(time, results_dict[key], legend_label=f"{key}", color=color, line_width=2.0)
         plot.legend.location = "top_left"
@@ -103,5 +103,8 @@ def results_view(request):
         script, div = components(plot)
         context['script'] = script
         context['div'] = div
+        context['ode_string'] = ode_strings
+
+        print(context['ode_string'])
 
     return render(request, 'ODE_finder/results_view.html', context)

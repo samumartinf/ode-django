@@ -27,7 +27,7 @@ def adding_task(x, y):
 
 
 @shared_task
-def find_structure(file_path, experiment_pk, title, preprocessor='SP'):
+def find_structure(file_path, experiment_pk, title, preprocessor=None):
     os.chdir(settings.EXPERIMENTS_URL)
     path, file = os.path.split(file_path)
 
@@ -55,10 +55,15 @@ def find_structure(file_path, experiment_pk, title, preprocessor='SP'):
                     proc.calculate_time_derivative()
                     dydt = proc.dydt
 
-                else:
+                elif preprocessor == 'SP':
                     proc = SplineSignalPreprocessor(t=t, y=x_data)
                     y_samples = proc.interpolate(t)
                     dydt = proc.calculate_time_derivative(t)
+
+                else:
+                    y_samples = x_data
+                    dydt = np.gradient(x_data)
+
 
                 if preprocessor == 'GP':
                     dy_std = proc.A_std
@@ -82,7 +87,7 @@ def find_structure(file_path, experiment_pk, title, preprocessor='SP'):
             tmp = ['*'.join(map(str, x)) for x in combinations_with_replacement(col_list, i)]
             for entry in tmp:
                 d_f.append(entry)
-
+        d_f.append('1')
         print(d_f)
         dict_builder = DictionaryBuilder(dict_fcns=d_f)
 
@@ -105,6 +110,7 @@ def find_structure(file_path, experiment_pk, title, preprocessor='SP'):
         ode_model = StateSpaceModel(states=sbl_dict, parameters=None)
         print("Estimated ODE model:")
         print(ode_model)
+        ode_model_str = str(ode_model)
 
         # TODO: Catch error if no solution is found
         states = col_list
@@ -139,7 +145,7 @@ def find_structure(file_path, experiment_pk, title, preprocessor='SP'):
         result_file.close()
         temp_file.close()
 
-        return plot_dict
+        return plot_dict, ode_model_str
 
     except IOError as e:
         print(e)

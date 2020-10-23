@@ -27,10 +27,12 @@ class SimulationResult(models.Model):
     # Choices preparation
     GP = 'GP'
     SPLN = 'SP'
+    NONE = 'NA'
 
     PREPROCESSOR_CHOICES = [
         (GP, 'Gaussian Process'),
         (SPLN, 'Spline'),
+        (NONE, 'None')
     ]
 
     # Model fields
@@ -45,7 +47,6 @@ class SimulationResult(models.Model):
     simulation_date = models.DateTimeField('date simulated', auto_now=True)
 
     # Model modifiers
-
     def __str__(self):
         return self.title
 
