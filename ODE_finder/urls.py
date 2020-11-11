@@ -11,6 +11,8 @@ urlpatterns = [
   path('experiments/<int:pk>/', views.delete_experiment, name='delete_experiment'),
   path('experiments/simulate/', views.simulation_config, name='simulation_config'),
   path('experiments/results/', views.results_view, name='results_view'),
+  path('test/', views.test_view, name='test_view'),
+  path('task/<str:task_id>/', views.TaskView.as_view(), name='task'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:

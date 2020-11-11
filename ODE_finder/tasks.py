@@ -5,6 +5,10 @@ from django.core.files import File
 from django.conf import settings
 from celery import shared_task
 from scipy.integrate import solve_ivp
+from bokeh.plotting import figure
+from bokeh.embed import components
+from bokeh.palettes import Category20
+from bokeh.models import HoverTool
 
 import pandas as pd
 
@@ -145,7 +149,8 @@ def find_structure(file_path, experiment_pk, title, preprocessor=None):
         result_file.close()
         temp_file.close()
 
-        return plot_dict, ode_model_str
+
+        return plot_dict, ode_model_str,
 
     except IOError as e:
         print(e)
