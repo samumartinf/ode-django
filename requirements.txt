@@ -18,3 +18,4 @@ sympy
 cvxpy
 pandas
 scikit-learn
+gunicorn
